@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { MessageCircle, Send, Info } from "lucide-react";
-import { Button, Field, Textarea, Select, Badge } from "@/components/ui/primitives";
+import { MessageCircle, Send } from "lucide-react";
+import { Button, Field, Textarea, Select } from "@/components/ui/primitives";
 import { Modal } from "@/components/ui/overlay";
 import { post } from "@/lib/client/api";
 import { toast } from "sonner";

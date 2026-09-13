@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, X, Search } from "lucide-react";
+import { Loader2, X, Search, ChevronDown } from "lucide-react";
 import { cn, avatarColorClass, initials } from "@/lib/utils";
 
 /* ── Button ─────────────────────────────────────────────── */
@@ -119,22 +119,21 @@ export const Select = React.forwardRef<
   React.SelectHTMLAttributes<HTMLSelectElement>
 >(function Select({ className, children, ...props }, ref) {
   return (
-    <select
-      ref={ref}
-      className={cn(
-        fieldBase,
-        "h-9.5 cursor-pointer appearance-none bg-[length:16px] bg-[right_0.6rem_center] bg-no-repeat pr-9",
-        className,
-      )}
-      style={{
-        height: "2.375rem",
-        backgroundImage:
-          "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.2' stroke-linecap='round'><path d='m6 9 6 6 6-6'/></svg>\")",
-      }}
-      {...props}
-    >
-      {children}
-    </select>
+    <div className="relative w-full">
+      <select
+        ref={ref}
+        className={cn(
+          fieldBase,
+          "h-9.5 w-full cursor-pointer appearance-none pr-9 text-sm",
+          className,
+        )}
+        style={{ height: "2.375rem" }}
+        {...props}
+      >
+        {children}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+    </div>
   );
 });
 

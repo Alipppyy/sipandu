@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/auth";
 import { handle, fail } from "@/lib/api";
 import { logActivity } from "@/lib/audit";
-import { enqueue, processOutbox } from "@/lib/wa";
+import { enqueue, processOutbox, renderTemplate, hasUnrenderedTemplate, getProfile } from "@/lib/wa";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +79,12 @@ export async function POST(req: Request) {
         break;
     }
 
+    const profile = await getProfile();
+    const renderedMessage = renderTemplate(parsed.data.message, { nama: "Warga" }, profile);
+    if (!renderedMessage || hasUnrenderedTemplate(renderedMessage)) {
+      return fail("Template pesan masih memiliki placeholder yang belum diproses.", 422);
+    }
+
     let queued = 0;
     let skipped = 0;
     for (const r of residents) {
@@ -86,10 +92,15 @@ export async function POST(req: Request) {
         skipped++;
         continue;
       }
+      const body = renderTemplate(parsed.data.message, { nama: r.name, nama_rw: `RW ${profile.rwNumber}` }, profile);
+      if (!body || hasUnrenderedTemplate(body)) {
+        skipped++;
+        continue;
+      }
       await enqueue({
         toPhone: r.phone,
         toName: r.name,
-        body: parsed.data.message,
+        body,
         category: "LAINNYA",
         templateKey: null,
         sendImmediately: false,

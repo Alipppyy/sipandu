@@ -22,6 +22,10 @@ export async function getProfile() {
 
 export type RenderVars = Record<string, string | number | undefined | null>;
 
+export function hasUnrenderedTemplate(body: string) {
+  return /\{\{\s*[\w.]+\s*\}\}/.test(body);
+}
+
 export function renderTemplate(body: string, vars: RenderVars, profile?: Awaited<ReturnType<typeof getProfile>>) {
   const all: RenderVars = {
     nama_rw: profile ? `RW ${profile.rwNumber}` : "RW",
@@ -33,10 +37,11 @@ export function renderTemplate(body: string, vars: RenderVars, profile?: Awaited
     kota: profile?.city ?? "",
     ...vars,
   };
-  return body.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, key: string) => {
+  const rendered = body.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, key: string) => {
     const value = all[key];
     return value === undefined || value === null || value === "" ? "-" : String(value);
   });
+  return hasUnrenderedTemplate(rendered) ? null : rendered;
 }
 
 export async function renderByKey(key: string, vars: RenderVars) {
@@ -53,6 +58,10 @@ export async function renderByKey(key: string, vars: RenderVars) {
  * ──────────────────────────────────────────────────────────── */
 
 async function sendFonnte(phone: string, message: string, token: string, sender?: string | null): Promise<SendResult> {
+  if (hasUnrenderedTemplate(message)) {
+    return { ok: false, error: "Template masih memiliki placeholder yang belum diproses." };
+  }
+
   const res = await fetch("https://api.fonnte.com/send", {
     method: "POST",
     headers: {
@@ -67,18 +76,29 @@ async function sendFonnte(phone: string, message: string, token: string, sender?
     }),
   }).catch(() => null as unknown as Response);
 
-  if (!res || !res.ok) {
-    return { ok: false, error: `Gateway HTTP ${res?.status ?? "tidak terhubung"}` };
+  if (!res) {
+    return { ok: false, error: "Gateway Fonnte tidak dapat dijangkau." };
   }
-  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (json.status === true || json.status === "true") {
-    return { ok: true, providerId: String(json.id ?? json.detail ?? "") || undefined, simulated: false };
+
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    const reason =
+      (body.reason as string) ||
+      (body.message as string) ||
+      (Array.isArray(body.detail) ? String(body.detail[0]) : "") ||
+      `Gateway HTTP ${res.status}`;
+    return { ok: false, error: String(reason) };
   }
+
+  if (body.status === true || body.status === "true" || body.success === true) {
+    return { ok: true, providerId: String(body.id ?? body.detail ?? "") || undefined, simulated: false };
+  }
+
   const reason =
-    (json.reason as string) ||
-    (json.message as string) ||
-    (Array.isArray(json.detail) ? String(json.detail[0]) : "") ||
-    "Gateway menolak pesan";
+    (body.reason as string) ||
+    (body.message as string) ||
+    (Array.isArray(body.detail) ? String(body.detail[0]) : "") ||
+    "Gateway Fonnte menolak pesan";
   return { ok: false, error: String(reason) };
 }
 
@@ -125,11 +145,18 @@ export async function deliver(phone: string, message: string): Promise<SendResul
   const normalized = normalizePhone(phone);
   if (!normalized) return { ok: false, error: "Nomor WhatsApp tidak valid" };
 
+  if (hasUnrenderedTemplate(message)) {
+    return { ok: false, error: "Template masih memiliki placeholder yang belum diproses." };
+  }
+
   if (!profile.waEnabled) {
     return { ok: true, simulated: true };
   }
+
   const token = profile.waToken || process.env.FONNTE_TOKEN || "";
-  if (!token) return { ok: true, simulated: true };
+  if (!token) {
+    return { ok: false, error: "Token gateway WhatsApp belum diatur." };
+  }
 
   switch (profile.waProvider) {
     case "wablas":

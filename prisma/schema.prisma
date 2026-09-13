@@ -1,0 +1,486 @@
+// SIPANDU RW — Sistem Informasi Pelayanan & Pengingat Warga RW
+// PostgreSQL + Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enum
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN // Super admin / pengurus RW
+  OPERATOR // Sekretaris / bendahara RW
+  KETUA_RT // Pengurus RT
+  WARGA // Warga (akses portal)
+}
+
+enum Gender {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum Religion {
+  ISLAM
+  KRISTEN
+  KATOLIK
+  HINDU
+  BUDDHA
+  KONGHUCU
+}
+
+enum Education {
+  SD
+  SMP
+  SMA
+  DIPLOMA
+  SARJANA
+  PASCASARJANA
+}
+
+enum MaritalStatus {
+  BELUM_KAWIN
+  KAWIN
+  CERAI_HIDUP
+  CERAI_MATI
+}
+
+enum FamilyRole {
+  KEPALA
+  ISTRI
+  ANAK
+  ORANG_TUA
+  FAMILI_LAIN
+}
+
+enum ResidentStatus {
+  AKTIF
+  PINDAH
+  MENINGGAL
+}
+
+enum ActivityType {
+  KERJA_BAKTI
+  RONDA
+  RAPAT
+  PENGAJIAN
+  POSYANDU
+  LAINNYA
+}
+
+enum ActivityStatus {
+  TERENCANA
+  BERLANGSUNG
+  SELESAI
+  DIBATALKAN
+}
+
+enum AttendanceStatus {
+  BELUM_KONFIRM
+  HADIR
+  IZIN
+  ALPHA
+}
+
+enum BillStatus {
+  BELUM_BAYAR
+  MENUNGGU_KONFIRMASI
+  LUNAS
+  DIBEBASKAN
+}
+
+enum PaymentMethod {
+  TUNAI
+  TRANSFER
+  QRIS
+  LAINNYA
+}
+
+enum AnnouncementCategory {
+  PENTING
+  KEGIATAN
+  KEUANGAN
+  UMUM
+}
+
+enum LetterType {
+  DOMISILI
+  SKCK
+  PENGANTAR_KTP
+  PENGANTAR_KK
+  USAHA
+  TIDAK_MAMPU
+  KETERANGAN_LAIN
+}
+
+enum LetterStatus {
+  DIAJUKAN
+  DIPROSES
+  SELESAI
+  DITOLAK
+}
+
+enum MessageStatus {
+  DRAFT
+  ANTRIAN
+  TERKIRIM
+  TERKIRIM_SIMULASI
+  GAGAL
+}
+
+enum MessageCategory {
+  PENGINGAT_SAMPAH
+  JADWAL_KEGIATAN
+  PENGUMUMAN
+  BUKTI_BAYAR
+  SURAT_SELESAI
+  LAINNYA
+}
+
+// ─────────────────────────────────────────────────────────────
+// Identitas Wilayah & Pengaturan
+// ─────────────────────────────────────────────────────────────
+
+model RwProfile {
+  id               String  @id @default(cuid())
+  rwNumber         String  @default("05")
+  village          String  @default("Banjar") // Kelurahan/Desa
+  district         String  @default("Banjar") // Kecamatan
+  city             String  @default("Kota Banjar") // Kota/Kabupaten
+  province         String  @default("Jawa Barat")
+  postalCode       String  @default("46311")
+  address          String  @default("Jl. Raya Banjar No. 12")
+  ketuaName        String  @default("H. Surya Wijaya")
+  ketuaPhone       String  @default("6281234567890")
+  sekretarisName   String  @default("Nia Kurniasih, S.AP")
+  bendaharaName    String  @default("Deddy Kurniawan")
+  // WhatsApp gateway
+  waProvider       String  @default("fonnte") // fonnte | wablas | meta | simulated
+  waToken          String? // FONNTE_TOKEN
+  waSender         String? // nomor/device pengirim (opsional)
+  waEnabled        Boolean @default(false)
+  waAutoSend       Boolean @default(true)
+  // Pengingat sampah
+  trashFeeAmount   Int     @default(25000)
+  trashDueDay      Int     @default(10) // jatuh tempo tanggal 10 tiap bulan
+  reminderOffsets  String  @default("-3,0,3,7") // hari relatif dari jatuh tempo
+  reminderHour     Int     @default(8) // jam pengiriman
+  activityReminder Boolean @default(true)
+  activityLeadHours Int    @default(12) // kirim pengingat kegiatan H-12 jam
+  updatedAt        DateTime @updatedAt
+}
+
+model Rt {
+  id          String     @id @default(cuid())
+  number      String // "01"
+  rwNumber    String     @default("05")
+  areaName    String // "Blok Melati"
+  ketuaUserId String?    @unique
+  ketuaUser   User?      @relation("RtKetua", fields: [ketuaUserId], references: [id], onDelete: SetNull)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  families    Family[]
+  residents   Resident[]
+  activities  Activity[]
+  bills       WasteBill[]
+  letters     Letter[]
+  users       User[]     @relation("UserRt")
+
+  @@unique([number, rwNumber])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pengguna
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role      @default(WARGA)
+  active       Boolean   @default(true)
+  avatarColor  String    @default("emerald")
+  rtId         String?
+  rt           Rt?       @relation("UserRt", fields: [rtId], references: [id], onDelete: SetNull)
+  ketuaRt      Rt?       @relation("RtKetua")
+  residentId   String?   @unique
+  resident     Resident? @relation(fields: [residentId], references: [id], onDelete: SetNull)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  announcements Announcement[]
+  letterApprovals Letter[]    @relation("LetterProcessor")
+  payments      Payment[]
+  activityLogs  AuditLog[]
+  billsPaid     WasteBill[]    @relation("BillCollector")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Kependudukan
+// ─────────────────────────────────────────────────────────────
+
+model Family {
+  id          String     @id @default(cuid())
+  kkNumber    String     @unique // No. Kartu Keluarga (16 digit)
+  headName    String // cache nama kepala keluarga
+  address     String
+  block       String? // Blok / gang
+  houseNumber String?
+  rtId        String
+  rt          Rt         @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  headId      String?    @unique
+  head        Resident?  @relation("FamilyHead", fields: [headId], references: [id], onDelete: SetNull)
+  members     Resident[] @relation("FamilyMembers")
+  membersCount Int       @default(0)
+  economicStatus String  @default("MENENGAH") // MAMPU | MENENGAH | KURANG_MAMPU
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  bills       WasteBill[]
+
+  @@index([rtId])
+}
+
+model Resident {
+  id            String         @id @default(cuid())
+  nik           String         @unique
+  name          String
+  gender        Gender         @default(LAKI_LAKI)
+  birthPlace    String         @default("Banjar")
+  birthDate     DateTime
+  religion      Religion       @default(ISLAM)
+  education     Education      @default(SMA)
+  occupation    String         @default("Wiraswasta")
+  maritalStatus MaritalStatus  @default(KAWIN)
+  phone         String?
+  whatsapp      String?
+  email         String?
+  familyId      String?
+  family        Family?        @relation("FamilyMembers", fields: [familyId], references: [id], onDelete: SetNull)
+  headsFamily   Family?        @relation("FamilyHead")
+  familyRole    FamilyRole     @default(ANAK)
+  rtId          String
+  rt            Rt             @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  status        ResidentStatus @default(AKTIF)
+  isVoter       Boolean        @default(true)
+  bloodType     String         @default("O")
+  notes         String?
+  user          User?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  assignments   ActivityAssignment[]
+  letters       Letter[]
+  bills         WasteBill[]
+
+  @@index([rtId])
+  @@index([familyId])
+  @@index([name])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Kegiatan / Jadwal Pengabdian Masyarakat
+// ─────────────────────────────────────────────────────────────
+
+model Activity {
+  id             String        @id @default(cuid())
+  title          String
+  type           ActivityType  @default(KERJA_BAKTI)
+  description    String?
+  location       String        @default("Balai RW")
+  startsAt       DateTime
+  endsAt         DateTime
+  rtId           String? // null = kegiatan tingkat RW
+  rt             Rt?           @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  picName        String        @default("Ketua RW")
+  picPhone       String?
+  status         ActivityStatus @default(TERENCANA)
+  reminderSentAt DateTime?
+  reminderCount  Int           @default(0)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  assignments    ActivityAssignment[]
+
+  @@index([startsAt])
+}
+
+model ActivityAssignment {
+  id          String           @id @default(cuid())
+  activityId  String
+  activity    Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  residentId  String
+  resident    Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  role        String           @default("Petugas")
+  status      AttendanceStatus @default(BELUM_KONFIRM)
+  note        String?
+  confirmedAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@unique([activityId, residentId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Iuran / Retribusi Sampah
+// ─────────────────────────────────────────────────────────────
+
+model WasteBill {
+  id          String       @id @default(cuid())
+  billNumber  String       @unique
+  familyId    String
+  family      Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  payerId     String? // warga penanggung jawab (default kepala keluarga)
+  payer       Resident?    @relation(fields: [payerId], references: [id], onDelete: SetNull)
+  rtId        String
+  rt          Rt           @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  periodMonth Int
+  periodYear  Int
+  amount      Int          @default(25000)
+  dueDate     DateTime
+  status      BillStatus   @default(BELUM_BAYAR)
+  paidAmount  Int          @default(0)
+  paidAt      DateTime?
+  paidById    String?
+  paidBy      User?        @relation("BillCollector", fields: [paidById], references: [id], onDelete: SetNull)
+  method      PaymentMethod?
+  receiptNo   String?
+  notes       String?
+  lastReminderAt  DateTime?
+  lastReminderKey String? // e.g. "d-3", "d0", "d+3"
+  reminderCount   Int       @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  payments    Payment[]
+
+  @@unique([familyId, periodMonth, periodYear])
+  @@index([status])
+  @@index([dueDate])
+  @@index([rtId])
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  billId     String
+  bill       WasteBill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  amount     Int
+  method     PaymentMethod @default(TUNAI)
+  paidAt     DateTime      @default(now())
+  receivedBy String?
+  receiver   User?         @relation(fields: [receivedBy], references: [id], onDelete: SetNull)
+  receiptNo  String        @unique
+  note       String?
+  createdAt  DateTime      @default(now())
+
+  @@index([paidAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pengumuman
+// ─────────────────────────────────────────────────────────────
+
+model Announcement {
+  id          String                @id @default(cuid())
+  title       String
+  body        String
+  category    AnnouncementCategory  @default(UMUM)
+  pinned      Boolean               @default(false)
+  published   Boolean               @default(true)
+  publishedAt DateTime              @default(now())
+  authorId    String?
+  author      User?                 @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  rtScope     String? // null = seluruh RW, selainnya kode RT
+  broadcastAt DateTime?
+  broadcastCount Int                @default(0)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([publishedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Surat Pengantar
+// ─────────────────────────────────────────────────────────────
+
+model Letter {
+  id          String       @id @default(cuid())
+  number      String       @unique
+  residentId  String
+  resident    Resident     @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  rtId        String
+  rt          Rt           @relation(fields: [rtId], references: [id], onDelete: Cascade)
+  type        LetterType   @default(DOMISILI)
+  purpose     String
+  status      LetterStatus @default(DIAJUKAN)
+  processedById String?
+  processedBy User?        @relation("LetterProcessor", fields: [processedById], references: [id], onDelete: SetNull)
+  finishedAt  DateTime?
+  notes       String?
+  notifyReadyAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────
+// WhatsApp
+// ─────────────────────────────────────────────────────────────
+
+model MessageTemplate {
+  id        String          @id @default(cuid())
+  key       String          @unique
+  name      String
+  category  MessageCategory @default(LAINNYA)
+  body      String
+  active    Boolean         @default(true)
+  updatedAt DateTime        @updatedAt
+}
+
+model WaMessage {
+  id           String          @id @default(cuid())
+  toPhone      String
+  toName       String
+  body         String
+  category     MessageCategory @default(LAINNYA)
+  templateKey  String?
+  status       MessageStatus   @default(DRAFT)
+  provider     String?
+  providerId   String?
+  error        String?
+  attempts     Int             @default(0)
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  relatedType  String? // "WasteBill" | "Activity" | "Letter" | "Announcement"
+  relatedId    String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Log aktivitas
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userName    String   @default("Sistem")
+  action      String // CREATE | UPDATE | DELETE | SEND | PAY | LOGIN
+  entity      String // Warga | Kegiatan | Tagihan ...
+  entityId    String?
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}

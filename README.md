@@ -3,7 +3,6 @@
 Aplikasi manajemen RT/RW full-stack: data kependudukan, jadwal kegiatan (kerja bakti & ronda),
 iuran kebersihan, surat pengantar, pengumuman, **dan pengingat otomatis yang dikirim ke WhatsApp warga**.
 
-Demo ini diset untuk **RW 05, Kel. Banjar, Kec. Banjar, Kota Banjar, Jawa Barat**.
 
 ---
 
@@ -77,7 +76,7 @@ Bukti pembayaran & notifikasi surat selesai juga dikirim otomatis.
 
 ---
 
-## 🧱 Teknologi
+## 🧱 Teknologi yang Digunakan
 
 - **Next.js 15** (App Router, TypeScript, React 19) — UI & API dalam satu aplikasi
 - **PostgreSQL 17 + Prisma 6** — penyimpanan persisten
@@ -91,7 +90,7 @@ Bukti pembayaran & notifikasi surat selesai juga dikirim otomatis.
 
 ---
 
-## 🚀 Menjalankan
+## 🚀 Cara Menjalankan
 
 ```bash
 # 1. Dependensi
@@ -112,15 +111,6 @@ npm run dev              # http://localhost:3000
 ```bash
 bash scripts/bootstrap.sh      # SKIP_SEED=1 untuk melewati seeding
 ```
-
-### Menjalankan PostgreSQL (sandbox ini)
-Basis data berjalan dari direktori data di dalam workspace (`~/pgdata`) agar ikut tersimpan:
-
-```bash
-./scripts/start-db.sh
-```
-
-> Di luar sandbox, gunakan PostgreSQL yang sudah terpasang dan setel `DATABASE_URL` pada `.env`.
 
 ### Akun demo (sandi: `sipandu123`)
 
@@ -159,31 +149,46 @@ Penyedia lain (Wablas / Meta Cloud API) dapat dipilih pada dropdown **Penyedia**
 
 ---
 
-## 🗂️ Struktur
+## 🗂️ Struktur Folder
 
 ```
-prisma/
-  schema.prisma        # 14 model: RW, RT, KK, Warga, Kegiatan, Tagihan, Pembayaran, Surat, WA…
-  seed.ts              # data demo deterministik: 5 RT, 44 KK, 148 warga, 16 kegiatan,
-                       # 176 tagihan, 178 log WA, 8 template — hasil identik setiap seeding
-src/
-  app/
-    (app)/dashboard/   # halaman pengurus (shell + sidebar)
-    (warga)/warga/     # portal warga (akun WARGA, data miliknya sendiri)
-    kwitansi/[id]/     # kwitansi siap cetak
-    surat/[id]/cetak/  # surat pengantar siap cetak
-    api/               # REST: residents(+export), families, rt, activities, bills(+export),
-                       # payments, announcements, letters, users, wa/*, portal/summary,
-                       # stats, public/lookup, cron
-    login/             # halaman masuk
-    page.tsx           # portal publik
-  components/          # ui (primitives, overlay, table, states), layout, dashboard, forms
-  hooks/               # useCollection (optimistic SWR), useResource, useDebounce
-  lib/                 # prisma, auth, api, wa (gateway), scheduler, audit, csv, utils
-scripts/
-  bootstrap.sh         # setup + jalankan aplikasi dalam satu perintah
-  start-db.sh          # menjalankan PostgreSQL dari direktori data workspace
-  demo-reset.sh        # reset & seed ulang data demo
+SIPANDU/
+│
+├── prisma/
+│   ├── schema.prisma       # Struktur database
+│   └── seed.ts             # Data demo
+│
+├── src/
+│   ├── app/
+│   │   ├── (app)/
+│   │   │   └── dashboard/  # Dashboard pengurus
+│   │   │
+│   │   ├── (warga)/
+│   │   │   └── warga/      # Portal warga
+│   │   │
+│   │   ├── api/            # REST API aplikasi
+│   │   │
+│   │   ├── kwitansi/       # Cetak kwitansi
+│   │   ├── surat/          # Cetak surat
+│   │   ├── login/          # Halaman login
+│   │   ├── layout.tsx      # Layout utama
+│   │   └── page.tsx        # Landing page
+│   │
+│   ├── components/         # Komponen UI
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utility, database, auth, WhatsApp
+│   └── instrumentation.ts  # Scheduler
+│
+├── scripts/                # Script bantuan
+├── public/                 # Asset publik
+│
+├── .env                    # Environment lokal
+├── .env.example            # Template environment
+├── .gitignore              # File yang diabaikan Git
+├── package.json            # Dependency & command
+├── next.config.ts          # Konfigurasi Next.js
+├── tsconfig.json           # Konfigurasi TypeScript
+└── README.md               # Dokumentasi project
 ```
 
 ---
@@ -199,30 +204,4 @@ scripts/
 
 ---
 
-## 🧪 Perintah
-
-```bash
-npm run dev        # mode pengembangan (0.0.0.0:3000)
-npm run build      # build produksi
-npm start          # menjalankan build produksi (0.0.0.0:3000)
-npm run setup      # migrasi + seed
-npm run db:seed    # ulang data demo (menghapus isi tabel)
-npm run db:studio  # Prisma Studio
-npm run lint       # ESLint
-```
-
-## ✅ Pemeriksaan terakhir
-
-| Item | Hasil |
-|---|---|
-| `npx next build` | sukses, 0 error tipe |
-| `npx eslint .` | 0 error, 0 peringatan (92 berkas) |
-| `prisma/seed.ts` | 0 `any` — seluruh enum bertipe Prisma |
-| Seed ulang 2× | hasil identik (deterministik) |
-| Rute | 14 halaman + 40 endpoint API, seluruhnya merespons 200 |
-| Responsif | 0 overflow horizontal pada 390 px & 1440 px (semua halaman) |
-| Cetak | kwitansi & surat pengantar siap print A4 |
-
----
-
-Dibangun sebagai demo aplikasi manajemen RT/RW — data seluruhnya contoh (fiktif).
+Dibangun sebagai aplikasi manajemen RT/RW — data seluruhnya hanya contoh (fiktif).

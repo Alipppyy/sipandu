@@ -333,7 +333,7 @@ export default async function PublicHome() {
           </div>
         </div>
         <div className="mx-auto mt-8 max-w-6xl border-t border-line px-5 pt-6 text-[11.5px] text-muted">
-          © {new Date().getFullYear()} SIPANDU RW — demo aplikasi manajemen RT/RW.
+          © {new Date().getFullYear()} SIPANDU RW — aplikasi manajemen RT/RW.
         </div>
       </footer>
     </div>

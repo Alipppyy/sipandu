@@ -61,13 +61,13 @@ export default async function LoginPage() {
             </div>
           </div>
 
-          <p className="text-[11.5px] opacity-70">RW 05 · Kel. Banjar, Kec. Banjar, Kota Banjar, Jawa Barat</p>
+          <p className="text-[11.5px] opacity-70">RW 08 · Des. Panguban, Kec. Katapang, Kota Bandung, Jawa Barat</p>
         </div>
       </div>
 
       {/* Form */}
       <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-8">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full max-w-100">
           <div className="mb-8 lg:hidden">
             <Link href="/" className="mb-6 inline-flex items-center gap-2.5">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">

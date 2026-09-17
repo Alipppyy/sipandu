@@ -1,228 +1,438 @@
-# SIPANDU RW — Sistem Pelayanan & Pengingat Warga RW
+# SIPANDU RW
 
-Aplikasi manajemen RT/RW full-stack: data kependudukan, jadwal kegiatan (kerja bakti & ronda),
-iuran kebersihan, surat pengantar, pengumuman, **dan pengingat otomatis yang dikirim ke WhatsApp warga**.
+> Sistem Pelayanan & Pengingat Warga RW
 
-Demo ini diset untuk **RW 05, Kel. Banjar, Kec. Banjar, Kota Banjar, Jawa Barat**.
-
----
-
-## ✨ Fitur utama
-
-### Portal publik (`/`)
-- Beranda informasi RW: statistik warga, pengumuman, jadwal kegiatan, layanan.
-- **Cek tagihan iuran** hanya dengan NIK atau No. KK (tanpa login, nomor telepon disamarkan).
-- Tombol **Portal Warga** untuk masuk ke area pribadi.
-
-### Portal Warga (`/warga`) — khusus akun berperan `WARGA`
-Warga yang masuk **otomatis diarahkan ke sini** (bukan dashboard pengurus) dan hanya melihat
-datanya sendiri:
-- **Ringkasan** — sapaan, identitas (NIK, RT, No. KK, alamat), kartu tunggakan / total bayar /
-  kegiatan mendatang, tugas kegiatan yang ditugaskan kepadanya, anggota KK, kegiatan terdekat,
-  dan pengumuman terbaru.
-- **Tagihan** — riwayat iuran per periode dengan status & jatuh tempo, peringatan tunggakan,
-  tautan **kwitansi**, dan panduan cara membayar (tunai / transfer / QRIS).
-- **Kegiatan** — jadwal RW & RT-nya, ditandai bila ia termasuk petugas.
-- **Pengumuman** — seluruh pengumuman yang dipublikasikan.
-- Navigasi tab ramah ponsel, mode gelap, dan tombol keluar di pojok kanan atas.
-
-### Kwitansi pembayaran (`/kwitansi/[id]`)
-- Halaman cetak siap print/PDF (kop RW, data penyetor, detail pembayaran, nominal + **terbilang**,
-  kolom tanda tangan penyetor & petugas).
-- Tombol **Cetak / Simpan PDF** dan **Tutup**; `@page` A4 dan warna cetak presisi.
-- Dapat diakses pengurus (semua tagihan) maupun warga (hanya KK-nya sendiri — selain itu 404).
-
-### Cetak surat pengantar (`/surat/[id]/cetak`)
-- Dokumen siap print/PDF: kop RW, nomor surat, judul sesuai jenis (domisili, SKCK, KTP, KK,
-  usaha, tidak mampu), identitas pemohon lengkap, keperluan, lalu kolom tanda tangan
-  **Ketua RT** dan **Ketua RW**.
-- Bila status belum `SELESAI`, halaman menampilkan peringatan bahwa dokumen hanya pratinjau.
-- Ketua RT hanya dapat mencetak surat wilayahnya sendiri.
-
-### Ekspor CSV
-- **Data Warga** → `GET /api/residents/export` (mengikuti filter pencarian, RT, status).
-- **Rekap Iuran** → `GET /api/bills/export` (mengikuti filter status, RT, bulan, tahun).
-- Berkas ber-UTF-8 BOM & dipisah `;` sehingga langsung rapi di Excel; setiap ekspor tercatat
-  pada log aktivitas.
-
-### Dashboard pengurus (`/dashboard`)
-- **Dashboard** — KPI, grafik penerimaan iuran 6 bulan (recharts), kegiatan mendatang,
-  tunggakan teratas, kepatuhan per RT, ringkasan WhatsApp, log aktivitas.
-- **Data Warga** — CRUD warga lengkap dengan NIK, KK, RT, kontak WhatsApp, filter & pencarian.
-- **Kartu Keluarga** — CRUD KK, daftar anggota, riwayat iuran, status ekonomi.
-- **Wilayah RT** — CRUD wilayah + penunjukan ketua RT, sebaran warga & kepatuhan iuran per RT.
-- **Kegiatan & Jadwal** — CRUD kegiatan, penugasan petugas, absensi (Hadir/Izin/Alpha),
-  pengingat otomatis sebelum kegiatan.
-- **Iuran Sampah** — generate tagihan massal, pembayaran (tunai/transfer/QRIS), kwitansi,
-  riwayat pembayaran, pembatalan setoran, dan pengingat tunggakan.
-- **Surat Pengantar** — alur DIAJUKAN → DIPROSES → SELESAI/DITOLAK + notifikasi WhatsApp.
-- **Pengumuman** — CRUD, sematkan/publikasikan, **siaran sekali klik ke WhatsApp warga**.
-- **WhatsApp Center** — log pesan, statistik pengiriman, kirim ulang yang gagal,
-  composer pesan massal, editor template, pengaturan gateway & aturan pengingat.
-- **Pengguna** — manajemen akun + peran (Admin, Operator, Ketua RT, Warga).
-- **Pengaturan** — profil RW, aturan pengingat, ganti kata sandi, info penjadwal.
-
-### Pengingat WhatsApp otomatis
-| Siklus | Kapan | Isi |
-|---|---|---|
-| H-3 | 3 hari sebelum jatuh tempo | Pemberitahuan tagihan akan jatuh tempo |
-| H | Hari jatuh tempo | Pengingat pembayaran |
-| H+3 | 3 hari lewat | Tunggakan, minta konfirmasi |
-| H+7 | 7 hari lewat | Tunggakan lanjutan |
-
-Pengingat kegiatan dikirim **H-12 jam** ke seluruh petugas yang ditugaskan.
-Pengingat kegiatan yang sudah terkirim dapat **dijadwalkan ulang** dari menu aksi kegiatan
-(`POST /api/activities/[id]/reminder`) bila jadwal berubah.
-Bukti pembayaran & notifikasi surat selesai juga dikirim otomatis.
+SIPANDU adalah aplikasi manajemen RT/RW berbasis web untuk membantu pengurus mengelola data warga, kartu keluarga, kegiatan, iuran, surat pengantar, pengumuman, serta pengingat otomatis melalui WhatsApp.
 
 ---
 
-## 🧱 Teknologi
+## ✨ Fitur
 
-- **Next.js 15** (App Router, TypeScript, React 19) — UI & API dalam satu aplikasi
-- **PostgreSQL 17 + Prisma 6** — penyimpanan persisten
-- **Tailwind CSS v4** — desain sistem (light/dark, responsif)
-- **SWR** — data fetching dengan **optimistic updates**
-- **Recharts** — grafik dashboard
-- **jose + bcryptjs** — sesi JWT (httpOnly cookie) & hashing sandi
-- **Zod** — validasi seluruh endpoint
-- **Sonner** — notifikasi toast
-- **Fonnte** (utama), Wablas / Meta Cloud API (opsional) — gateway WhatsApp
+### 🌐 Portal Publik
+
+- Informasi RW
+- Statistik warga
+- Pengumuman
+- Jadwal kegiatan
+- Informasi layanan
+- Cek tagihan menggunakan NIK atau No. KK
+- Nomor telepon ditampilkan secara tersamarkan
+- Akses menuju Portal Warga
+
+### 👤 Portal Warga
+
+Khusus pengguna dengan role `WARGA`.
+
+- Ringkasan data pribadi
+- Informasi NIK, KK, RT, dan alamat
+- Status dan riwayat iuran
+- Informasi tunggakan
+- Kwitansi pembayaran
+- Jadwal kegiatan
+- Tugas kegiatan
+- Anggota KK
+- Pengumuman
+- Navigasi mobile
+- Dark mode
+
+### 📊 Dashboard Pengurus
+
+- Dashboard statistik dan KPI
+- Grafik penerimaan iuran
+- Data Warga
+- Kartu Keluarga
+- Wilayah RT
+- Kegiatan & Jadwal
+- Absensi kegiatan
+- Iuran Sampah
+- Surat Pengantar
+- Pengumuman
+- WhatsApp Center
+- Manajemen Pengguna
+- Pengaturan RW
+
+### 💰 Iuran
+
+- Generate tagihan massal
+- Pembayaran tunai
+- Pembayaran transfer
+- Pembayaran QRIS
+- Riwayat pembayaran
+- Kwitansi
+- Pembatalan setoran
+- Pengingat tunggakan
+- Export rekap iuran ke CSV
+
+### 📄 Surat Pengantar
+
+Mendukung alur:
+
+`DIAJUKAN → DIPROSES → SELESAI / DITOLAK`
+
+Jenis surat meliputi:
+
+- Surat Domisili
+- SKCK
+- KTP
+- KK
+- Surat Usaha
+- Surat Tidak Mampu
+
+Surat yang selesai dapat dicetak dalam format siap print/PDF.
+
+### 📢 Pengumuman
+
+- Membuat pengumuman
+- Edit dan hapus pengumuman
+- Sematkan pengumuman
+- Publikasikan pengumuman
+- Broadcast pengumuman melalui WhatsApp
+
+### 📱 WhatsApp Center
+
+- Log pesan
+- Statistik pengiriman
+- Kirim ulang pesan gagal
+- Composer pesan massal
+- Template pesan
+- Pengaturan gateway
+- Aturan pengingat otomatis
+- Dukungan Fonnte
+- Dukungan Wablas
+- Dukungan Meta Cloud API
+
+### 🔔 Pengingat Otomatis
+
+SIPANDU mendukung beberapa siklus pengingat iuran:
+
+| Waktu | Pengingat |
+|---|---|
+| H-3 | Tagihan akan jatuh tempo |
+| H | Hari jatuh tempo |
+| H+3 | Pengingat tunggakan |
+| H+7 | Pengingat tunggakan lanjutan |
+
+Pengingat kegiatan dikirim **H-12 jam** kepada petugas yang ditugaskan.
 
 ---
 
-## 🚀 Menjalankan
+## 🧱 Tech Stack
+
+| Teknologi | Penggunaan |
+|---|---|
+| Next.js 15 | Framework aplikasi |
+| React 19 | UI |
+| TypeScript | Bahasa pemrograman |
+| PostgreSQL 17 | Database |
+| Prisma 6 | ORM |
+| Tailwind CSS v4 | Styling |
+| SWR | Data fetching |
+| Recharts | Grafik |
+| Zod | Validasi |
+| jose | Session JWT |
+| bcryptjs | Password hashing |
+| Sonner | Toast notification |
+| Fonnte | WhatsApp Gateway |
+
+---
+
+## 📁 Struktur Project
+
+```text
+SIPANDU/
+│
+├── prisma/
+│   ├── schema.prisma          # Schema database
+│   └── seed.ts                # Data demo
+│
+├── src/
+│   ├── app/
+│   │   ├── (app)/
+│   │   │   └── dashboard/     # Dashboard pengurus
+│   │   │
+│   │   ├── (warga)/
+│   │   │   └── warga/         # Portal warga
+│   │   │
+│   │   ├── api/               # REST API
+│   │   │
+│   │   ├── kwitansi/
+│   │   │   └── [id]/          # Cetak kwitansi
+│   │   │
+│   │   ├── surat/
+│   │   │   └── [id]/
+│   │   │       └── cetak/     # Cetak surat
+│   │   │
+│   │   ├── login/             # Halaman login
+│   │   ├── layout.tsx         # Layout utama
+│   │   └── page.tsx           # Landing page
+│   │
+│   ├── components/
+│   │   ├── ui/                # Komponen UI
+│   │   ├── layout/            # Layout components
+│   │   ├── dashboard/         # Dashboard components
+│   │   └── forms/             # Form components
+│   │
+│   ├── hooks/                 # Custom React hooks
+│   ├── lib/                   # Database, auth, API, WhatsApp, dll.
+│   └── instrumentation.ts     # Scheduler
+│
+├── scripts/
+│   ├── bootstrap.sh            # Setup aplikasi
+│   ├── start-db.sh             # Start database
+│   └── demo-reset.sh           # Reset data demo
+│
+├── public/                    # Asset publik
+│
+├── .env.example               # Template environment
+├── .gitignore                 # Git ignore rules
+├── package.json               # Dependencies & scripts
+├── next.config.ts             # Next.js config
+├── tsconfig.json              # TypeScript config
+└── README.md                  # Dokumentasi
+```
+
+> File `.env` digunakan untuk konfigurasi lokal dan tidak disimpan di repository.
+
+---
+
+## 👥 Role & Permission
+
+| Role | Akses |
+|---|---|
+| `ADMIN` | Seluruh data, pengguna, pengaturan, dan gateway |
+| `OPERATOR` | Operasional RW |
+| `KETUA_RT` | Operasional yang terbatas pada RT sendiri |
+| `WARGA` | Hanya data pribadi dan data KK melalui Portal Warga |
+
+---
+
+## 🚀 Installation
+
+### 1. Clone repository
 
 ```bash
-# 1. Dependensi
+git clone https://github.com/Alipppyy/sipandu.git
+cd sipandu
+```
+
+### 2. Install dependencies
+
+```bash
 npm install
-
-# 2. Konfigurasi environment
-cp .env.example .env     # lalu sesuaikan DATABASE_URL, AUTH_SECRET, FONNTE_TOKEN
-
-# 3. Siapkan basis data + data demo
-npm run setup            # prisma migrate deploy + seed
-
-# 4. Jalankan
-npm run dev              # http://localhost:3000
 ```
 
-**Atau satu perintah** (install → database → migrasi → seed → build → start):
+### 3. Setup environment
+
+Copy file `.env.example` menjadi `.env`.
 
 ```bash
-bash scripts/bootstrap.sh      # SKIP_SEED=1 untuk melewati seeding
+cp .env.example .env
 ```
 
-### Menjalankan PostgreSQL (sandbox ini)
-Basis data berjalan dari direktori data di dalam workspace (`~/pgdata`) agar ikut tersimpan:
+Kemudian sesuaikan konfigurasi:
+
+```env
+DATABASE_URL="postgresql://postgres:PASSWORD@localhost:5432/sipandu"
+AUTH_SECRET="your-secret"
+FONNTE_TOKEN=""
+CRON_SECRET="your-cron-secret"
+SCHEDULER_INTERVAL_MINUTES=30
+```
+
+> Jangan commit file `.env` ke repository.
+
+### 4. Setup database
+
+Pastikan PostgreSQL sudah berjalan, kemudian jalankan:
 
 ```bash
-./scripts/start-db.sh
+npm run setup
 ```
 
-> Di luar sandbox, gunakan PostgreSQL yang sudah terpasang dan setel `DATABASE_URL` pada `.env`.
+Command ini menjalankan migration dan seed data demo.
 
-### Akun demo (sandi: `sipandu123`)
-
-| Email | Peran |
-|---|---|
-| `admin@sipandu.rw` | Administrator RW |
-| `sekretaris@sipandu.rw` | Operator / Sekretaris |
-| `bendahara@sipandu.rw` | Operator / Bendahara |
-| `rt01@sipandu.rw` … `rt05@sipandu.rw` | Ketua RT 01–05 |
-| `warga@sipandu.rw` | Warga — masuk ke **Portal Warga** `/warga` |
-
----
-
-## 📱 Konfigurasi WhatsApp (Fonnte)
-
-1. Daftar di [fonnte.com](https://fonnte.com) dan hubungkan perangkat WhatsApp.
-2. Salin **token API**, lalu isi salah satu dari:
-   - `.env` → `FONNTE_TOKEN=xxxxx`, atau
-   - menu **WhatsApp → Pengaturan** (disimpan di basis data).
-3. Aktifkan **“Aktifkan pengiriman nyata”** pada halaman pengaturan.
-
-Selama token kosong, aplikasi berjalan dalam **mode simulasi**:
-seluruh pesan tetap diproses, dicatat pada log, dan ditandai `TERKIRIM (simulasi)` —
-tidak ada pesan sungguhan yang dikirim dan tidak ada biaya.
-
-Penyedia lain (Wablas / Meta Cloud API) dapat dipilih pada dropdown **Penyedia**.
-
-### Penjadwal
-- **Internal**: `src/instrumentation.ts` menjalankan penjadwal tiap 30 menit bersama server
-  (atur lewat `SCHEDULER_INTERVAL_MINUTES`).
-- **Eksternal (disarankan untuk produksi)**:
-  ```bash
-  curl -X POST "https://domain-anda/api/cron/reminders?secret=$CRON_SECRET"
-  ```
-- **Manual**: tombol *Jalankan Penjadwal* pada dashboard, WhatsApp Center, atau halaman Iuran.
-
----
-
-## 🗂️ Struktur
-
-```
-prisma/
-  schema.prisma        # 14 model: RW, RT, KK, Warga, Kegiatan, Tagihan, Pembayaran, Surat, WA…
-  seed.ts              # data demo deterministik: 5 RT, 44 KK, 148 warga, 16 kegiatan,
-                       # 176 tagihan, 178 log WA, 8 template — hasil identik setiap seeding
-src/
-  app/
-    (app)/dashboard/   # halaman pengurus (shell + sidebar)
-    (warga)/warga/     # portal warga (akun WARGA, data miliknya sendiri)
-    kwitansi/[id]/     # kwitansi siap cetak
-    surat/[id]/cetak/  # surat pengantar siap cetak
-    api/               # REST: residents(+export), families, rt, activities, bills(+export),
-                       # payments, announcements, letters, users, wa/*, portal/summary,
-                       # stats, public/lookup, cron
-    login/             # halaman masuk
-    page.tsx           # portal publik
-  components/          # ui (primitives, overlay, table, states), layout, dashboard, forms
-  hooks/               # useCollection (optimistic SWR), useResource, useDebounce
-  lib/                 # prisma, auth, api, wa (gateway), scheduler, audit, csv, utils
-scripts/
-  bootstrap.sh         # setup + jalankan aplikasi dalam satu perintah
-  start-db.sh          # menjalankan PostgreSQL dari direktori data workspace
-  demo-reset.sh        # reset & seed ulang data demo
-```
-
----
-
-## 🔐 Peran & hak akses
-
-| Peran | Ruang lingkup |
-|---|---|
-| `ADMIN` | Semua data + pengguna + pengaturan + gateway |
-| `OPERATOR` | Operasional RW (warga, KK, kegiatan, iuran, surat, pengumuman, WA) |
-| `KETUA_RT` | Sama seperti operator, **terbatas pada RT-nya sendiri** |
-| `WARGA` | Portal Warga `/warga` — hanya data pribadinya & KK-nya |
-
----
-
-## 🧪 Perintah
+### 5. Jalankan aplikasi
 
 ```bash
-npm run dev        # mode pengembangan (0.0.0.0:3000)
-npm run build      # build produksi
-npm start          # menjalankan build produksi (0.0.0.0:3000)
-npm run setup      # migrasi + seed
-npm run db:seed    # ulang data demo (menghapus isi tabel)
-npm run db:studio  # Prisma Studio
-npm run lint       # ESLint
+npm run dev
 ```
 
-## ✅ Pemeriksaan terakhir
+Buka:
 
-| Item | Hasil |
-|---|---|
-| `npx next build` | sukses, 0 error tipe |
-| `npx eslint .` | 0 error, 0 peringatan (92 berkas) |
-| `prisma/seed.ts` | 0 `any` — seluruh enum bertipe Prisma |
-| Seed ulang 2× | hasil identik (deterministik) |
-| Rute | 14 halaman + 40 endpoint API, seluruhnya merespons 200 |
-| Responsif | 0 overflow horizontal pada 390 px & 1440 px (semua halaman) |
-| Cetak | kwitansi & surat pengantar siap print A4 |
+```text
+http://localhost:3000
+```
 
 ---
 
-Dibangun sebagai demo aplikasi manajemen RT/RW — data seluruhnya contoh (fiktif).
+## 📱 WhatsApp dengan Fonnte
+
+SIPANDU menggunakan Fonnte sebagai gateway WhatsApp utama.
+
+### Konfigurasi
+
+1. Hubungkan perangkat WhatsApp ke Fonnte.
+2. Ambil Device Token.
+3. Masukkan token ke `.env`:
+
+```env
+FONNTE_TOKEN="your-device-token"
+```
+
+4. Jalankan aplikasi.
+5. Buka:
+
+```text
+Dashboard → WhatsApp → Pengaturan
+```
+
+6. Aktifkan pengiriman nyata jika ingin mengirim pesan WhatsApp sebenarnya.
+
+Jika token kosong, SIPANDU tetap dapat menjalankan proses WhatsApp dalam mode simulasi sehingga pesan tidak dikirim ke nomor sebenarnya.
+
+---
+
+## ⏰ Scheduler
+
+SIPANDU memiliki tiga cara menjalankan scheduler.
+
+### Internal
+
+Scheduler berjalan bersama server melalui:
+
+```text
+src/instrumentation.ts
+```
+
+Interval dapat diatur melalui:
+
+```env
+SCHEDULER_INTERVAL_MINUTES=30
+```
+
+### External
+
+Untuk deployment production:
+
+```bash
+curl -X POST "https://domain-anda/api/cron/reminders?secret=$CRON_SECRET"
+```
+
+### Manual
+
+Scheduler juga dapat dijalankan melalui tombol:
+
+```text
+Dashboard
+→ WhatsApp Center
+→ Iuran
+```
+
+---
+
+## 📤 Export Data
+
+SIPANDU menyediakan export CSV untuk:
+
+### Data Warga
+
+```text
+GET /api/residents/export
+```
+
+Mendukung filter pencarian, RT, dan status.
+
+### Rekap Iuran
+
+```text
+GET /api/bills/export
+```
+
+Mendukung filter status, RT, bulan, dan tahun.
+
+File CSV menggunakan UTF-8 BOM dan separator `;` sehingga dapat dibuka dengan baik di Excel.
+
+---
+
+## 🛠️ Scripts
+
+| Command | Fungsi |
+|---|---|
+| `npm install` | Install dependencies |
+| `npm run dev` | Menjalankan development server |
+| `npm run setup` | Migration + seed database |
+| `npm run build` | Build production |
+| `npm run start` | Menjalankan production server |
+| `npm run db:seed` | Seed database |
+| `npm run db:reset` | Reset database |
+| `npm run lint` | Menjalankan ESLint |
+
+---
+
+## 🗃️ Database
+
+Database menggunakan:
+
+```text
+PostgreSQL 17
+       │
+       ▼
+    Prisma 6
+       │
+       ▼
+     SIPANDU
+```
+
+Schema database berada di:
+
+```text
+prisma/schema.prisma
+```
+
+Data demo tersedia melalui:
+
+```text
+prisma/seed.ts
+```
+
+> Data pada seed merupakan data contoh/fiktif dan tidak ditujukan untuk penggunaan data warga sebenarnya.
+
+---
+
+## 🔐 Security
+
+Beberapa konfigurasi penting disimpan melalui environment variable:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `FONNTE_TOKEN`
+- `CRON_SECRET`
+
+Gunakan `.env.example` sebagai template konfigurasi.
+
+---
+
+## 📌 Project Status
+
+SIPANDU saat ini berada dalam tahap pengembangan dan penyempurnaan fitur.
+
+Fokus pengembangan meliputi:
+
+- Penyempurnaan UI/UX
+- Perbaikan bug
+- Pengujian fitur
+- Integrasi WhatsApp
+- Penyempurnaan workflow administrasi RT/RW
+- Optimasi performa dan responsivitas
+
+---
+
+## 📄 License
+
+Project ini dibuat untuk kebutuhan pengembangan dan pembelajaran sistem manajemen RT/RW.
+
+---
+
+## 👨‍💻 Developer
+
+**Alipppyy**

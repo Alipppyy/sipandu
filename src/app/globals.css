@@ -225,8 +225,4 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .print\:hidden,
-  .print\:bg-white {
-    /* handled by Tailwind utilities */
-  }
 }

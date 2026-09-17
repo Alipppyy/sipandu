@@ -1,8 +1,16 @@
-# SIPANDU RW
+# SIPANDU
 
-> Sistem Pelayanan & Pengingat Warga RW
+### Sistem Pelayanan & Pengingat Warga RW
 
-SIPANDU adalah aplikasi manajemen RT/RW berbasis web untuk membantu pengurus mengelola data warga, kartu keluarga, kegiatan, iuran, surat pengantar, pengumuman, serta pengingat otomatis melalui WhatsApp.
+Aplikasi manajemen RT/RW untuk mengelola data warga,
+administrasi, iuran, kegiatan, surat, pengumuman,
+dan notifikasi WhatsApp dalam satu sistem.
+
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](...)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](...)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql)](...)
+[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma)](...)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss)](...)
 
 ---
 

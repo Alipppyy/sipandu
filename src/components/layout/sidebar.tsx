@@ -201,13 +201,13 @@ export function Sidebar({
       <aside
         className={cn(
           "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 lg:flex",
-          collapsed ? "w-19" : "w-19",
+          collapsed ? "w-[76px]" : "w-[248px]",
         )}
       >
         <SidebarContent user={user} collapsed={collapsed} />
         <button
           onClick={onToggleCollapse}
-          className="absolute -right-3 top-18 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-line bg-surface text-muted shadow-sm transition-all hover:text-foreground lg:flex"
+          className="absolute -right-3 top-[4.5rem] z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-line bg-surface text-muted shadow-sm transition-all hover:text-foreground lg:flex"
           aria-label={collapsed ? "Perlebar sidebar" : "Persempit sidebar"}
         >
           <ChevronLeft className={cn("h-3.5 w-3.5 transition-transform", collapsed && "rotate-180")} />
@@ -218,7 +218,7 @@ export function Sidebar({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="animate-fade-in absolute inset-0 bg-slate-950/50" onClick={onCloseMobile} aria-hidden />
-          <aside className="animate-slide-in-right absolute left-0 top-0 h-full w-66 bg-surface shadow-xl">
+          <aside className="animate-slide-in-right absolute left-0 top-0 h-full w-[264px] bg-surface shadow-xl">
             <button
               onClick={onCloseMobile}
               className="absolute right-3 top-5 z-10 rounded-lg p-1.5 text-muted hover:bg-surface-muted"

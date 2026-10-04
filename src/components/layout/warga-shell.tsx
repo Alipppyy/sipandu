@@ -81,7 +81,7 @@ export function WargaShell({
               >
                 {initials(user.name)}
               </span>
-              <span className="hidden max-w-[120px] truncate text-[13px] font-medium sm:block">{user.name}</span>
+              <span className="hidden max-w-30 truncate text-[13px] font-medium sm:block">{user.name}</span>
               <ChevronDown className="h-3.5 w-3.5 text-muted" />
             </button>
             {menuOpen && (
